@@ -2,6 +2,8 @@ package com.javaapp.api_banking.controller.auth;
 
 import com.javaapp.api_banking.Dtos.auth.LoginRequest;
 import com.javaapp.api_banking.Dtos.auth.LoginResponse;
+import com.javaapp.api_banking.Dtos.auth.RefreshTokenRequest;
+import com.javaapp.api_banking.Dtos.auth.RefreshTokenResponse;
 import com.javaapp.api_banking.Dtos.users.UserRequest;
 import com.javaapp.api_banking.Dtos.users.UserResponse;
 import com.javaapp.api_banking.entity.RefreshToken;
@@ -24,20 +26,32 @@ public class AuthController {
     private final UserRepository userRepository;
 
     @PostMapping("/refresh")
-    public LoginResponse refreshToken(@RequestBody String refreshToken){
-        refreshTokenService.validateRefreshToken(refreshToken);
-        RefreshToken tokenEntity = refreshTokenService.findByToken(refreshToken).orElseThrow(() -> new RuntimeException("Refresh token not found"));
-        User user = tokenEntity.getUser();
-        String newJwt = jwtTokenProvider.generateTokenFromUsername(user.getEmail());
-        refreshTokenService.revokeRefreshToken(refreshToken);
-        String newRefreshToken= refreshTokenService.createRefreshToken(user);
-        return LoginResponse.builder()
-                .email(user.getEmail())
-                .jwt(newJwt)
+    public RefreshTokenResponse refresh(@RequestBody RefreshTokenRequest request) {
+
+        RefreshToken oldToken =
+                refreshTokenService.validateRefreshToken(request.getRefreshToken());
+
+        User user = oldToken.getUser();
+
+        // 🔥 rotation
+        refreshTokenService.revokeRefreshToken(oldToken.getToken());
+        String newRefreshToken = refreshTokenService.createRefreshToken(user);
+
+        String newAccessToken =
+                jwtTokenProvider.generateTokenFromUsername(user.getEmail());
+
+        return RefreshTokenResponse.builder()
+                .accessToken(newAccessToken)
                 .refreshToken(newRefreshToken)
-                .name(user.getFirstName()+" "+user.getLastName())
                 .build();
     }
+
+
+    @PostMapping("/logout")
+    public void logout(@RequestBody RefreshTokenRequest request) {
+        refreshTokenService.revokeRefreshToken(request.getRefreshToken());
+    }
+
 
 //    @PostMapping("/refresh")
 //    public LoginResponse refreshToken(@RequestBody RefreshTokenRequest request) { // Utilisation du DTO

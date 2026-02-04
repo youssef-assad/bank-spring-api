@@ -9,7 +9,7 @@ public interface RefreshTokenService {
 
     String createRefreshToken(User user);
 
-    boolean validateRefreshToken(String token);
+    RefreshToken validateRefreshToken(String token);
 
     void revokeRefreshToken(String token);
 

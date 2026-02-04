@@ -68,10 +68,12 @@ public class UserServiceImpl implements UserService {
         authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(request.getEmail(),request.getPassword())
         );
-
+            User user = (User) authentication.getPrincipal();
+String refreshToken = refreshTokenService.createRefreshToken(user);
         return LoginResponse.builder()
                 .email(request.getEmail())
                 .jwt(jwtTokenProvider.generateToken(authentication))
+                .refreshToken(refreshToken)
                 .build();
     }
 //    public LoginResponse login(LoginRequest request) {

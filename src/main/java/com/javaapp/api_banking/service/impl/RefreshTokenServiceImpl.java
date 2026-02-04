@@ -5,7 +5,8 @@ import com.javaapp.api_banking.entity.User;
 import com.javaapp.api_banking.exception.BusinessException;
 import com.javaapp.api_banking.repository.RefreshTokenRepository;
 import com.javaapp.api_banking.service.RefreshTokenService;
-import lombok.AllArgsConstructor;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
@@ -13,17 +14,23 @@ import java.util.Optional;
 import java.util.UUID;
 
 @Service
-@AllArgsConstructor
+
 public class RefreshTokenServiceImpl implements RefreshTokenService {
     private final RefreshTokenRepository refreshTokenRepository;
-    private final Long REFRESH_TOKEN_DURATION_HOURS = 24 * 30L;
+    @Value("${app.jwt-refresh-expiration-hours}")
+    private Long refreshTokenDurationHours;
+
+    public RefreshTokenServiceImpl(RefreshTokenRepository refreshTokenRepository) {
+        this.refreshTokenRepository = refreshTokenRepository;
+    }
+
     @Override
     public String createRefreshToken(User user) {
         String token = UUID.randomUUID().toString();
         RefreshToken refreshToken = RefreshToken.builder()
                 .token(token)
                 .user(user)
-                .expiryDate(LocalDateTime.now().plusHours(REFRESH_TOKEN_DURATION_HOURS))
+                .expiryDate(LocalDateTime.now().plusHours(refreshTokenDurationHours))
                 .revoked(false)
                 .build();
         refreshTokenRepository.save(refreshToken);
@@ -31,16 +38,22 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     }
 
     @Override
-    public boolean validateRefreshToken(String token) {
-        RefreshToken refreshToken = refreshTokenRepository.findByToken(token).orElseThrow(
-                ()-> new BusinessException("REFRESH_TOKEN_NOT_FOUND", "Refresh token not found"));
-        if(
-                refreshToken.isRevoked() || refreshToken.getExpiryDate().isBefore(LocalDateTime.now())
-        ){
-            throw new BusinessException("REFRESH_TOKEN_INVALID", "Refresh token is invalid or expired");
+    public RefreshToken validateRefreshToken(String token) {
+        RefreshToken refreshToken = refreshTokenRepository.findByToken(token)
+                .orElseThrow(() -> new BusinessException(
+                        "REFRESH_TOKEN_NOT_FOUND",
+                        "Refresh token not found"
+                ));
+
+        if (refreshToken.isRevoked()) {
+            throw new BusinessException("REFRESH_TOKEN_REVOKED", "Token revoked");
         }
 
-        return true;
+        if (refreshToken.getExpiryDate().isBefore(LocalDateTime.now())) {
+            throw new BusinessException("REFRESH_TOKEN_EXPIRED", "Token expired");
+        }
+
+        return refreshToken;
     }
 
     @Override
