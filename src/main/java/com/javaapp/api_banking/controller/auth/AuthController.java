@@ -12,6 +12,9 @@ import com.javaapp.api_banking.repository.UserRepository;
 import com.javaapp.api_banking.security.JwtTokenProvider;
 import com.javaapp.api_banking.service.RefreshTokenService;
 import com.javaapp.api_banking.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import lombok.AllArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -24,7 +27,12 @@ public class AuthController {
     private final RefreshTokenService refreshTokenService;
     private final JwtTokenProvider jwtTokenProvider;
     private final UserRepository userRepository;
-
+    @Operation(summary = "Renouveler le token d'accès à l'aide d'un refresh token valide")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Nouveau access token et refresh token générés"),
+            @ApiResponse(responseCode = "400", description = "Refresh token invalide ou expiré"),
+            @ApiResponse(responseCode = "404", description = "Refresh token non trouvé")
+    })
     @PostMapping("/refresh")
     public RefreshTokenResponse refresh(@RequestBody RefreshTokenRequest request) {
 
@@ -46,41 +54,20 @@ public class AuthController {
                 .build();
     }
 
-
+    @Operation(summary = "Déconnexion de l'utilisateur en révoquant son refresh token")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Refresh token révoqué"),
+            @ApiResponse(responseCode = "404", description = "Refresh token non trouvé")
+    })
     @PostMapping("/logout")
     public void logout(@RequestBody RefreshTokenRequest request) {
         refreshTokenService.revokeRefreshToken(request.getRefreshToken());
     }
-
-
-//    @PostMapping("/refresh")
-//    public LoginResponse refreshToken(@RequestBody RefreshTokenRequest request) { // Utilisation du DTO
-//        String token = request.refreshToken();
-//
-//        // 1. Valider le token (expire ? révoqué ?)
-//        refreshTokenService.validateRefreshToken(token);
-//
-//        // 2. Récupérer l'entité et l'utilisateur associé
-//        RefreshToken tokenEntity = refreshTokenService.findByToken(token)
-//                .orElseThrow(() -> new BusinessException("TOKEN_NOT_FOUND", "Refresh token non trouvé"));
-//
-//        User user = tokenEntity.getUser();
-//
-//        // 3. LOGIQUE DE SÉCURITÉ : Révoquer l'ancien token avant d'en donner un nouveau
-//        // Cela évite qu'un token volé soit réutilisé à l'infini
-//        refreshTokenService.revokeRefreshToken(token);
-//
-//        // 4. Générer le nouveau couple de tokens
-//        String newJwt = jwtTokenProvider.generateTokenFromUsername(user.getEmail());
-//        String newRefreshToken = refreshTokenService.createRefreshToken(user);
-//
-//        return LoginResponse.builder()
-//                .email(user.getEmail())
-//                .jwt(newJwt)
-//                .refreshToken(newRefreshToken)
-//                .name(user.getFirstName() + " " + user.getLastName())
-//                .build();
-//    }
+    @Operation(summary = "Créer un nouvel utilisateur (inscription)")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Utilisateur créé avec succès"),
+            @ApiResponse(responseCode = "400", description = "Données utilisateur invalides ou email existant")
+    })
 
     @PostMapping("/register")
     public UserResponse createUser(
@@ -91,6 +78,11 @@ public class AuthController {
         return userService.createUser(request);
     }
 
+    @Operation(summary = "Authentifier un utilisateur et générer un JWT")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Connexion réussie, JWT généré"),
+            @ApiResponse(responseCode = "401", description = "Email ou mot de passe incorrect")
+    })
     @PostMapping("/login")
     public LoginResponse login(@RequestBody LoginRequest request) {
         return userService.login(request);
