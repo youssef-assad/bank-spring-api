@@ -4,6 +4,9 @@ import com.javaapp.api_banking.Dtos.users.UserRequest;
 import com.javaapp.api_banking.Dtos.users.UserResponse;
 import com.javaapp.api_banking.entity.User;
 import com.javaapp.api_banking.service.UserService;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import jakarta.validation.Valid;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
@@ -16,7 +19,11 @@ public class UserController {
     public UserController(UserService userService) {
         this.userService = userService;
     }
-
+    @Operation(summary = "Mettre à jour le profil de l'utilisateur connecté")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Profil mis à jour avec succès"),
+            @ApiResponse(responseCode = "400", description = "Données invalides")
+    })
     @PutMapping("/me")
     public UserResponse updateMyProfile(
             @AuthenticationPrincipal User user,
@@ -24,10 +31,11 @@ public class UserController {
     ) {
         return userService.updateMyProfile(user, request);
     }
-    @GetMapping("/usertest")
-    public String testUser(){
-        return "User Test ";
-    }
+    @Operation(summary = "Afficher les informations du profil de l'utilisateur connecté")
+    @ApiResponses(value = {
+            @ApiResponse(responseCode = "200", description = "Profil récupéré avec succès"),
+            @ApiResponse(responseCode = "401", description = "Utilisateur non authentifié")
+    })
     @GetMapping("/me")
     public UserResponse getMyProfile(
             @AuthenticationPrincipal User user
